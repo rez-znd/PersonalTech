@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:personaltech/services/usuario_service.dart';
 import 'package:personaltech/meus_treinos.dart';
 import 'package:personaltech/cadastro.dart';
-import 'package:http/http.dart' as http;
 
 void main() {
   runApp(const MaterialApp(
@@ -19,8 +18,8 @@ class TelaLogin extends StatefulWidget {
 }
 
 class _TelaLoginState extends State<TelaLogin> {
-
-  final emailController = TextEditingController();
+  // Renomeado para usuarioController para bater com o "username" da API
+  final usuarioController = TextEditingController();
   final senhaController = TextEditingController();
 
   @override
@@ -36,9 +35,7 @@ class _TelaLoginState extends State<TelaLogin> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   const SizedBox(height: 40),
-
                   const Center(
                     child: Column(
                       children: [
@@ -61,15 +58,13 @@ class _TelaLoginState extends State<TelaLogin> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 40),
-
                   const Text('Usuário'),
                   const SizedBox(height: 8),
                   TextField(
-                    controller: emailController,
+                    controller: usuarioController,
                     decoration: InputDecoration(
-                      hintText: 'seu@email.com',
+                      hintText: 'Seu nome de usuário',
                       filled: true,
                       fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
@@ -79,9 +74,7 @@ class _TelaLoginState extends State<TelaLogin> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   const Text('Senha'),
                   const SizedBox(height: 8),
                   TextField(
@@ -98,9 +91,7 @@ class _TelaLoginState extends State<TelaLogin> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
                   SizedBox(
                     width: double.infinity,
                     height: 55,
@@ -118,9 +109,7 @@ class _TelaLoginState extends State<TelaLogin> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 15),
-
                   SizedBox(
                     width: double.infinity,
                     height: 55,
@@ -154,43 +143,37 @@ class _TelaLoginState extends State<TelaLogin> {
     );
   }
 
-
   Future<void> login() async {
-
-    final url = Uri.parse('https://viacep.com.br/ws/13207270/json/');
+    // 1. Validação simples para evitar requisições vazias
+    if (usuarioController.text.isEmpty || senhaController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preencha usuário e senha')),
+      );
+      return;
+    }
 
     try {
-      final response = await http.get(url);
+      // 2. Chama a nossa função da API
+      final sucesso = await UsuarioService.login(
+        usuarioController.text.trim(),
+        senhaController.text,
+      );
 
-      if (response.statusCode == 200) {
-        final usuario = await UsuarioService().login(
-          emailController.text,
-          senhaController.text,
-        );
+      if (!mounted) return;
 
-        if (!mounted) return; 
-
-        if (usuario != null) {
-          final int idUsuario = usuario.IdUsuario!;
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MeusTreinos(
-                idUsuario: idUsuario,
-              ),
+      // 3. Analisa o resultado
+      if (sucesso) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const MeusTreinos(
+              idUsuario: 1, // ID fixo provisório, pois a API não retorna os dados do usuário
             ),
-          );
-
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Login ou senha inválidos')),
-          );
-        }
+          ),
+        );
       } else {
-        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Falha na autenticação')),
+          const SnackBar(content: Text('Usuário ou senha inválidos')),
         );
       }
     } catch (e) {

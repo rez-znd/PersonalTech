@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:personaltech/models/usuario.dart';
 import 'package:personaltech/services/usuario_service.dart';
-import 'package:personaltech/meus_treinos.dart';
 
 class TelaCadastro extends StatelessWidget {
   const TelaCadastro({super.key});
@@ -20,14 +18,13 @@ class CadastroScreen extends StatefulWidget {
 }
 
 class _CadastroScreenState extends State<CadastroScreen> {
-
+  // Apenas os controladores que a API do professor exige
+  final nomeController = TextEditingController();
+  final sobrenomeController = TextEditingController();
+  final loginController = TextEditingController();
   final emailController = TextEditingController();
   final senhaController = TextEditingController();
   final confirmarSenhaController = TextEditingController();
-  final dataController = TextEditingController();
-  final comorbidadeController = TextEditingController();
-
-  String? generoSelecionado;
 
   @override
   Widget build(BuildContext context) {
@@ -43,9 +40,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     const SizedBox(height: 20),
-
                     const Center(
                       child: Text(
                         'Cadastro',
@@ -56,10 +51,18 @@ class _CadastroScreenState extends State<CadastroScreen> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 30),
 
+                    buildLabel('Nome'),
+                    buildInput('Seu nome', controller: nomeController),
+
+                    buildLabel('Sobrenome'),
+                    buildInput('Seu sobrenome', controller: sobrenomeController),
+
                     buildLabel('Usuário'),
+                    buildInput('Crie um nome de usuário', controller: loginController),
+
+                    buildLabel('E-mail'),
                     buildInput('seu@email.com', controller: emailController),
 
                     buildLabel('Senha'),
@@ -68,17 +71,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                     buildLabel('Confirmação de senha'),
                     buildInput('********', obscure: true, controller: confirmarSenhaController),
 
-                    buildLabel('Data de nascimento'),
-                    buildInput('dd/mm/aaaa', controller: dataController, icon: Icons.calendar_today),
-
-                    buildLabel('Gênero'),
-                    buildDropdown(),
-
-                    buildLabel('Comorbidade'),
-                    buildInput('Ex: Hipertensão...', controller: comorbidadeController),
-
                     const SizedBox(height: 30),
-
                     SizedBox(
                       width: double.infinity,
                       height: 55,
@@ -93,9 +86,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                         child: const Text('Cadastrar'),
                       ),
                     ),
-
                     const SizedBox(height: 10),
-
                     SizedBox(
                       width: double.infinity,
                       height: 55,
@@ -112,7 +103,6 @@ class _CadastroScreenState extends State<CadastroScreen> {
                         child: const Text('Voltar'),
                       ),
                     ),
-
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -125,14 +115,14 @@ class _CadastroScreenState extends State<CadastroScreen> {
   }
 
   Future<void> cadastrarUsuario() async {
-
-    if (emailController.text.isEmpty ||
-        senhaController.text.isEmpty ||
-        dataController.text.isEmpty ||
-        generoSelecionado == null) {
-
+    // Validação garantindo que nenhum campo da API fique em branco
+    if (nomeController.text.isEmpty ||
+        sobrenomeController.text.isEmpty ||
+        loginController.text.isEmpty ||
+        emailController.text.isEmpty ||
+        senhaController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preencha todos os campos')),
+        const SnackBar(content: Text('Preencha todos os campos obrigatórios')),
       );
       return;
     }
@@ -144,25 +134,31 @@ class _CadastroScreenState extends State<CadastroScreen> {
       return;
     }
 
-    final usuario = Usuario(
-      Email: emailController.text,
-      Senha: senhaController.text,
-      DataNascimento: dataController.text,
-      Genero: generoSelecionado!,
-      Comorbidade: comorbidadeController.text,
-    );
-
     try {
-      final idGerado = await UsuarioService().cadastrar(usuario);
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => MeusTreinos(idUsuario: idGerado),
-        ),
+      final sucesso = await UsuarioService.registrar(
+        name: nomeController.text.trim(),
+        surname: sobrenomeController.text.trim(),
+        login: loginController.text.trim(),
+        email: emailController.text.trim(),
+        password: senhaController.text,
       );
+
+      if (sucesso) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Cadastro realizado com sucesso!')),
+          );
+          Navigator.pop(context); // Volta para a tela de login
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Erro ao realizar o cadastro.')),
+          );
+        }
+      }
     } catch (e) {
-      print("ERRO CADASTRO: $e");
+      print("ERRO CADASTRO API: $e");
     }
   }
 
@@ -177,7 +173,6 @@ class _CadastroScreenState extends State<CadastroScreen> {
       {bool obscure = false,
       IconData? icon,
       required TextEditingController controller}) {
-
     return TextField(
       controller: controller,
       obscureText: obscure,
@@ -195,31 +190,6 @@ class _CadastroScreenState extends State<CadastroScreen> {
           borderSide: BorderSide.none,
         ),
       ),
-    );
-  }
-
-  Widget buildDropdown() {
-    return DropdownButtonFormField<String>(
-      value: generoSelecionado,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide.none,
-        ),
-      ),
-      hint: const Text('Selecione'),
-      items: const [
-        DropdownMenuItem(value: 'Masculino', child: Text('Masculino')),
-        DropdownMenuItem(value: 'Feminino', child: Text('Feminino')),
-        DropdownMenuItem(value: 'Outro', child: Text('Outro')),
-      ],
-      onChanged: (value) {
-        setState(() {
-          generoSelecionado = value;
-        });
-      },
     );
   }
 }
