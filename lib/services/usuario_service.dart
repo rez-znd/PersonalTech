@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 class UsuarioService {
   static const String baseUrl = 'https://mobile-ios-login.zani0x03.eti.br/api';
-  static const String sistemaId = 'd7f0beee-ac36-4cdf-8dba-7c752ace6ec6';
+  static const String sistemaId = '84f35fde-e69e-487d-b837-1c5f80828f0b';
 
   static Future<bool> registrar({
     required String name,
@@ -21,10 +21,10 @@ class UsuarioService {
         body: jsonEncode({
           'name': name,
           'surname': surname,
-          'username': login, 
+          'login': login, 
           'email': email,
           'password': password,
-          'sistema_id': sistemaId,
+          'sistemaId': sistemaId,
         }),
       );
 
@@ -51,7 +51,7 @@ class UsuarioService {
         body: jsonEncode({
           'username': username,
           'password': password,
-          'sistema_id': sistemaId,
+          'sistemaId': sistemaId,
         }),
       );
 

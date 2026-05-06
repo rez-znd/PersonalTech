@@ -18,13 +18,23 @@ class CadastroScreen extends StatefulWidget {
 }
 
 class _CadastroScreenState extends State<CadastroScreen> {
-  // Apenas os controladores que a API do professor exige
   final nomeController = TextEditingController();
   final sobrenomeController = TextEditingController();
   final loginController = TextEditingController();
   final emailController = TextEditingController();
   final senhaController = TextEditingController();
   final confirmarSenhaController = TextEditingController();
+
+  @override
+  void dispose() {
+    nomeController.dispose();
+    sobrenomeController.dispose();
+    loginController.dispose();
+    emailController.dispose();
+    senhaController.dispose();
+    confirmarSenhaController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +51,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 20),
+
                     const Center(
                       child: Text(
                         'Cadastro',
@@ -51,27 +62,49 @@ class _CadastroScreenState extends State<CadastroScreen> {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 30),
 
                     buildLabel('Nome'),
-                    buildInput('Seu nome', controller: nomeController),
+                    buildInput(
+                      'Seu nome',
+                      controller: nomeController,
+                    ),
 
                     buildLabel('Sobrenome'),
-                    buildInput('Seu sobrenome', controller: sobrenomeController),
+                    buildInput(
+                      'Seu sobrenome',
+                      controller: sobrenomeController,
+                    ),
 
                     buildLabel('Usuário'),
-                    buildInput('Crie um nome de usuário', controller: loginController),
+                    buildInput(
+                      'Crie um nome de usuário',
+                      controller: loginController,
+                    ),
 
                     buildLabel('E-mail'),
-                    buildInput('seu@email.com', controller: emailController),
+                    buildInput(
+                      'seu@email.com',
+                      controller: emailController,
+                    ),
 
                     buildLabel('Senha'),
-                    buildInput('********', obscure: true, controller: senhaController),
+                    buildInput(
+                      '********',
+                      obscure: true,
+                      controller: senhaController,
+                    ),
 
                     buildLabel('Confirmação de senha'),
-                    buildInput('********', obscure: true, controller: confirmarSenhaController),
+                    buildInput(
+                      '********',
+                      obscure: true,
+                      controller: confirmarSenhaController,
+                    ),
 
                     const SizedBox(height: 30),
+
                     SizedBox(
                       width: double.infinity,
                       height: 55,
@@ -86,12 +119,15 @@ class _CadastroScreenState extends State<CadastroScreen> {
                         child: const Text('Cadastrar'),
                       ),
                     ),
+
                     const SizedBox(height: 10),
+
                     SizedBox(
                       width: double.infinity,
                       height: 55,
                       child: ElevatedButton(
                         onPressed: () {
+                          FocusScope.of(context).unfocus();
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(
@@ -103,6 +139,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                         child: const Text('Voltar'),
                       ),
                     ),
+
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -115,21 +152,26 @@ class _CadastroScreenState extends State<CadastroScreen> {
   }
 
   Future<void> cadastrarUsuario() async {
-    // Validação garantindo que nenhum campo da API fique em branco
+    FocusScope.of(context).unfocus();
+
     if (nomeController.text.isEmpty ||
         sobrenomeController.text.isEmpty ||
         loginController.text.isEmpty ||
         emailController.text.isEmpty ||
         senhaController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preencha todos os campos obrigatórios')),
+        const SnackBar(
+          content: Text('Preencha todos os campos obrigatórios'),
+        ),
       );
       return;
     }
 
     if (senhaController.text != confirmarSenhaController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Senhas não coincidem')),
+        const SnackBar(
+          content: Text('Senhas não coincidem'),
+        ),
       );
       return;
     }
@@ -146,33 +188,51 @@ class _CadastroScreenState extends State<CadastroScreen> {
       if (sucesso) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cadastro realizado com sucesso!')),
+            const SnackBar(
+              content: Text('Cadastro realizado com sucesso!'),
+            ),
           );
-          Navigator.pop(context); // Volta para a tela de login
+
+          Navigator.pop(context);
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Erro ao realizar o cadastro.')),
+            const SnackBar(
+              content: Text('Erro ao realizar o cadastro.'),
+            ),
           );
         }
       }
     } catch (e) {
       print("ERRO CADASTRO API: $e");
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro: $e'),
+          ),
+        );
+      }
     }
   }
 
   Widget buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(top: 15, bottom: 5),
-      child: Text(text, style: const TextStyle(fontSize: 14)),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 14),
+      ),
     );
   }
 
-  Widget buildInput(String hint,
-      {bool obscure = false,
-      IconData? icon,
-      required TextEditingController controller}) {
+  Widget buildInput(
+    String hint, {
+    bool obscure = false,
+    IconData? icon,
+    required TextEditingController controller,
+  }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
