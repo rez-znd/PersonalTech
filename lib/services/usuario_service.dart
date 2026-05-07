@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UsuarioService {
   static const String baseUrl = 'https://mobile-ios-login.zani0x03.eti.br/api';
@@ -41,7 +42,7 @@ class UsuarioService {
     }
   }
 
-  static Future<bool> login(String username, String password) async {
+static Future<String?> login(String username, String password) async {
     final url = Uri.parse('$baseUrl/auth/login');
 
     try {
@@ -57,14 +58,21 @@ class UsuarioService {
 
       if (response.statusCode == 200) {
         print('Login aprovado pela API!');
-        return true; 
+
+        final Map<String, dynamic> dados = jsonDecode(response.body);
+        String token = dados['access_token']; 
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwt_token', token);
+
+        return token;
+        
       } else {
         print('Credenciais inválidas: ${response.body}');
-        return false; 
+        return null; 
       }
     } catch (e) {
       print('Erro de conexão com a internet: $e');
-      return false; 
+      return null; 
     }
   }
 }

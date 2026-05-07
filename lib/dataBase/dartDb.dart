@@ -26,18 +26,6 @@ class DartDB {
 
   Future _createDB(Database db, int version) async {
 
-    // Usuario
-    await db.execute('''
-    CREATE TABLE Usuario (
-      IdUsuario INTEGER PRIMARY KEY AUTOINCREMENT,
-      Email TEXT UNIQUE NOT NULL,
-      Senha TEXT NOT NULL,
-      DataNascimento TEXT NOT NULL,
-      Genero TEXT NOT NULL,
-      Comorbidade TEXT NOT NULL
-    )
-    ''');
-
     // Dias da semana
     await db.execute('''
     CREATE TABLE DiaSemana (
@@ -60,7 +48,7 @@ class DartDB {
     await db.execute('''
     CREATE TABLE Treino (
       Id INTEGER PRIMARY KEY AUTOINCREMENT,
-      IdUsuario INTEGER NOT NULL,
+      IdUsuario TEXT NOT NULL,
       IdDiaSemana INTEGER NOT NULL,
       Exercicio TEXT NOT NULL,
       Series TEXT,
@@ -75,7 +63,7 @@ class DartDB {
     await db.execute('''
     CREATE TABLE MensagemChat (
       Id INTEGER PRIMARY KEY AUTOINCREMENT,
-      IdUsuario INTEGER NOT NULL,
+      IdUsuario TEXT NOT NULL,
       IsUser INTEGER NOT NULL,
       Conteudo TEXT NOT NULL,
       Tipo INTEGER NOT NULL,
@@ -89,7 +77,7 @@ class DartDB {
     return await db.insert('Treino', treino);
   }
 
-  Future<List<Map<String, dynamic>>> buscarTreinosPorDia(int idUsuario, int idDiaSemana) async {
+  Future<List<Map<String, dynamic>>> buscarTreinosPorDia(String idUsuario, int idDiaSemana) async {
     final db = await instance.database;
     return await db.query(
       'Treino',
@@ -123,7 +111,7 @@ class DartDB {
   return await db.query('DiaSemana');
 }
 
-Future<List<Map<String, dynamic>>> buscarTreinosPorUsuario(int idUsuario) async {
+Future<List<Map<String, dynamic>>> buscarTreinosPorUsuario(String idUsuario) async {
   final db = await instance.database;
   return await db.query(
     'Treino',
@@ -132,7 +120,7 @@ Future<List<Map<String, dynamic>>> buscarTreinosPorUsuario(int idUsuario) async 
   );
 }
 
-Future<List<Map<String, dynamic>>> buscarTodosOsDiasComTreinos(int idUsuario) async {
+Future<List<Map<String, dynamic>>> buscarTodosOsDiasComTreinos(String idUsuario) async {
     final db = await instance.database;
     
     return await db.rawQuery('''
@@ -154,7 +142,7 @@ Future<List<Map<String, dynamic>>> buscarTodosOsDiasComTreinos(int idUsuario) as
     final db = await instance.database;
     return await db.insert('MensagemChat', mensagem);
   }
-  Future<List<Map<String, dynamic>>> buscarMensagens(int idUsuario) async {
+  Future<List<Map<String, dynamic>>> buscarMensagens(String idUsuario) async {
     final db = await instance.database;
     return await db.query(
       'MensagemChat',

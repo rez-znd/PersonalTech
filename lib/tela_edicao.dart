@@ -4,7 +4,7 @@ import 'dataBase/dartDb.dart';
 class TelaEdicao extends StatefulWidget {
   final String nomeDoDia;
   final int idDiaSemana; 
-  final int idUsuario;   
+  final String idUsuario;   
 
   const TelaEdicao({
     super.key, 

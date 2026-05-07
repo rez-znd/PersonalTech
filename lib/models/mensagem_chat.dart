@@ -1,7 +1,7 @@
 
 class MensagemChat {
   final int? id;
-  final int idUsuario;
+  final String idUsuario;
   final int isUser; // 0 = bot, 1 = usuário
   final String conteudo;
   final int tipo; // 1 = texto, 2 = imagem

@@ -23,9 +23,10 @@ class TreinoDia {
 }
 
 class MeusTreinos extends StatefulWidget {
-  final int idUsuario;
+  final String idUsuario;
+  final String token;
 
-  const MeusTreinos({super.key, required this.idUsuario});
+  const MeusTreinos({super.key, required this.idUsuario, required this.token});
 
   @override
   State<MeusTreinos> createState() => _MeusTreinosState();
@@ -118,9 +119,12 @@ class _MeusTreinosState extends State<MeusTreinos> {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ChatIA(idUsuario: widget.idUsuario),
+                    builder: (context) => ChatIA(
+                      idUsuario: widget.idUsuario,
+                      token: widget.token,
+                    ),
                   ),
-                );
+              );
             },
           ),
           IconButton(

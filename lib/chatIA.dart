@@ -1,10 +1,14 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'dataBase/dartDb.dart';
+import 'package:http/http.dart' as http;
+import 'package:personaltech/dataBase/dartDb.dart';
+import 'package:personaltech/models/mensagem_chat.dart'; // Verifique se o caminho está correto
 
 class ChatIA extends StatefulWidget {
-  final int idUsuario;
+  final String idUsuario;
+  final String token;
 
-  const ChatIA({super.key, required this.idUsuario});
+  const ChatIA({super.key, required this.idUsuario, required this.token});
 
   @override
   State<ChatIA> createState() => _ChatIAState();
@@ -12,9 +16,17 @@ class ChatIA extends StatefulWidget {
 
 class _ChatIAState extends State<ChatIA> {
   final TextEditingController _mensagemController = TextEditingController();
-  List<Map<String, dynamic>> _mensagens = [];
+  List<MensagemChat> _mensagens = [];
   bool _carregando = true;
+  bool _digitandoIA = false;
+String instrucaoContexto = """
+Você é o assistente virtual do app Personal Tech, focado EXCLUSIVAMENTE em calistenia e saúde.
 
+REGRAS CRÍTICAS:
+1. NUNCA responda sobre: História, Astronomia, Geografia, Política, Geologia ou Curiosidades gerais.
+2. Se a pergunta não for sobre exercício físico ou dieta, responda algo como: "Sinto muito, mas só posso ajudar com treinos e saúde."
+3. Não abra exceções para biologia geral, apenas anatomia humana aplicada ao exercício.
+""";
   @override
   void initState() {
     super.initState();
@@ -22,160 +34,142 @@ class _ChatIAState extends State<ChatIA> {
   }
 
   Future<void> _carregarMensagens() async {
+    // Usando seu método do DartDB que retorna List<Map<String, dynamic>>
     final dados = await DartDB.instance.buscarMensagens(widget.idUsuario);
+    
     setState(() {
-      _mensagens = dados;
+      // Convertendo os mapas do banco para instâncias da sua Model
+      _mensagens = dados.map((map) => MensagemChat.fromMap(map)).toList();
       _carregando = false;
     });
   }
 
   Future<void> _enviarMensagem() async {
     String texto = _mensagemController.text.trim();
-    if (texto.isEmpty) return;
+    if (texto.isEmpty || _digitandoIA) return;
 
-    Map<String, dynamic> novaMensagem = {
-      'IdUsuario': widget.idUsuario,
-      'IsUser': 1,
-      'Conteudo': texto,
-      'Tipo': 1,
-    };
+    // 1. Criar objeto da sua Model para o Usuário
+    MensagemChat msgUsuario = MensagemChat(
+      idUsuario: widget.idUsuario,
+      isUser: 1,
+      conteudo: texto,
+      tipo: 1,
+    );
 
-    await DartDB.instance.inserirMensagem(novaMensagem);
-    
+    // 2. Salvar no banco e atualizar tela
+    await DartDB.instance.inserirMensagem(msgUsuario.toMap());
     _mensagemController.clear();
-    _carregarMensagens();
+    await _carregarMensagens();
+
+    setState(() => _digitandoIA = true);
+
+    try {
+      // 3. Chamada à API conforme a imagem
+      final response = await http.post(
+
+
+// No corpo do seu POST para a API:
+
+        Uri.parse('https://mobile-ios-ia.zani0x03.eti.br/api/ai/chat'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+        body: jsonEncode({
+  'prompt': "$instrucaoContexto \n Pergunta do usuário: $texto"
+  }),
+      );
+
+      if (response.statusCode == 200) {
+        final dados = jsonDecode(response.body);
+        
+        // 4. Criar objeto da sua Model para a Resposta da IA
+        MensagemChat msgIA = MensagemChat(
+          idUsuario: widget.idUsuario,
+          isUser: 0,
+          conteudo: dados['response'] ?? 'Sem resposta da IA',
+          tipo: 1,
+        );
+
+        await DartDB.instance.inserirMensagem(msgIA.toMap());
+      }
+    } catch (e) {
+      debugPrint("Erro na API: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _digitandoIA = false);
+        _carregarMensagens();
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[300],
+      backgroundColor: Colors.grey[200],
       appBar: AppBar(
-        backgroundColor: Colors.grey[300],
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Assistente IA',
-          style: TextStyle(color: Colors.blue),
-        ),
+        title: const Text('Assistente IA', style: TextStyle(color: Colors.blue)),
         centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 1,
       ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 350),
-            child: Column(
-              children: [
-                Expanded(
-                  child: _carregando
-                      ? const Center(child: CircularProgressIndicator())
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _mensagens.length + 1, 
-                          itemBuilder: (context, index) {
-                            if (index == 0) {
-                              return _construirBalaoIA(
-                                'Olá! Sou o assistente do Personal Tech 💪\n\n'
-                                'Posso te ajudar com:\n'
-                                'Sugestões de treinos\n'
-                                'Dicas de execução\n'
-                                'Informações sobre exercícios\n\n'
-                                'Como posso te ajudar?'
-                              );
-                            }
-                            
-                            final msg = _mensagens[index - 1];
-                            final isUser = msg['IsUser'] == 1;
-
-                            return isUser 
-                                ? _construirBalaoUsuario(msg['Conteudo']) 
-                                : _construirBalaoIA(msg['Conteudo']);
-                          },
-                        ),
-                ),
-                _construirBarraDigitacao(),
-              ],
-            ),
+      body: Column(
+        children: [
+          Expanded(
+            child: _carregando
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _mensagens.length,
+                    itemBuilder: (context, index) {
+                      final msg = _mensagens[index];
+                      return _construirBalao(msg);
+                    },
+                  ),
           ),
-        ),
+          if (_digitandoIA)
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text("IA está digitando...", style: TextStyle(fontStyle: FontStyle.italic)),
+            ),
+          _construirBarraDigitacao(),
+        ],
       ),
     );
   }
 
-  Widget _construirBalaoIA(String texto) {
+  Widget _construirBalao(MensagemChat msg) {
+    bool ehUsuario = msg.isUser == 1;
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: ehUsuario ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.blueGrey[100],
-          borderRadius: BorderRadius.circular(16),
+          color: ehUsuario ? Colors.blue[100] : Colors.white,
+          borderRadius: BorderRadius.circular(15),
         ),
-        child: Text(texto, style: const TextStyle(fontSize: 15)),
-      ),
-    );
-  }
-
-  Widget _construirBalaoUsuario(String texto) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.blue[100],
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(texto, style: const TextStyle(fontSize: 15)),
+        child: Text(msg.conteudo),
       ),
     );
   }
 
   Widget _construirBarraDigitacao() {
     return Container(
-      padding: const EdgeInsets.all(10),
-      color: Colors.transparent,
+      padding: const EdgeInsets.all(8),
+      color: Colors.white,
       child: Row(
         children: [
-          Container(
-            decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-            child: IconButton(
-              icon: const Icon(Icons.add, color: Colors.black54),
-              onPressed: () {},
-            ),
-          ),
-          const SizedBox(width: 8),
           Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: TextField(
-                controller: _mensagemController,
-                decoration: const InputDecoration(
-                  hintText: 'Digite sua mensagem...',
-                  border: InputBorder.none,
-                ),
-                onSubmitted: (_) => _enviarMensagem(),
-              ),
+            child: TextField(
+              controller: _mensagemController,
+              decoration: const InputDecoration(hintText: 'Pergunte algo...'),
+              onSubmitted: (_) => _enviarMensagem(),
             ),
           ),
-          const SizedBox(width: 8),
-          Container(
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.blue,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.send, color: Colors.white),
-              onPressed: _enviarMensagem,
-            ),
+          IconButton(
+            icon: const Icon(Icons.send, color: Colors.blue),
+            onPressed: _enviarMensagem,
           ),
         ],
       ),

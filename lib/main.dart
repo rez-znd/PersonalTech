@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:personaltech/services/usuario_service.dart';
 import 'package:personaltech/meus_treinos.dart';
 import 'package:personaltech/cadastro.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 
 void main() {
   runApp(const MaterialApp(
@@ -144,43 +145,43 @@ class _TelaLoginState extends State<TelaLogin> {
   }
 
   Future<void> login() async {
-    // 1. Validação simples para evitar requisições vazias
-    if (usuarioController.text.isEmpty || senhaController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preencha usuário e senha')),
-      );
-      return;
-    }
-
-    try {
-      // 2. Chama a nossa função da API
-      final sucesso = await UsuarioService.login(
-        usuarioController.text.trim(),
-        senhaController.text,
-      );
-
-      if (!mounted) return;
-
-      // 3. Analisa o resultado
-      if (sucesso) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const MeusTreinos(
-              idUsuario: 1, // ID fixo provisório, pois a API não retorna os dados do usuário
-            ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Usuário ou senha inválidos')),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro de conexão com o servidor.')),
-      );
-    }
+  if (usuarioController.text.isEmpty || senhaController.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Preencha usuário e senha')),
+    );
+    return;
   }
+
+  try {
+    final String? token = await UsuarioService.login(
+      usuarioController.text.trim(),
+      senhaController.text,
+    );
+
+    if (!mounted) return;
+
+    if (token != null && token.isNotEmpty) {
+      Map<String, dynamic> payload = JwtDecoder.decode(token);
+      String userId = payload['sub']; 
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MeusTreinos(
+            idUsuario: userId, token: token,
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Usuário ou senha inválidos')),
+      );
+    }
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Erro de conexão com o servidor.')),
+    );
+  }
+}
 }
